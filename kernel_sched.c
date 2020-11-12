@@ -225,7 +225,7 @@ void release_TCB(TCB* tcb)
   Both of these structures are protected by @c sched_spinlock.
 */
 
-rlnode SCHED; /* The scheduler queue */
+rlnode SCHED[PRIORITY_QUEUE]; /* The scheduler queue(s) */
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 
@@ -260,6 +260,7 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 	}
 }
 
+//UNFINISHED!
 /*
   Add TCB to the end of the scheduler list.
 
@@ -317,6 +318,8 @@ static void sched_wakeup_expired_timeouts()
 		sched_make_ready(tcb);
 	}
 }
+
+//UNFINISHED
 
 /*
   Remove the head of the scheduler list, if any, and
@@ -401,6 +404,8 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 		preempt_on;
 }
 
+//UNFINISHED!
+
 /* This function is the entry point to the scheduler's context switching */
 
 void yield(enum SCHED_CAUSE cause)
@@ -414,6 +419,25 @@ void yield(enum SCHED_CAUSE cause)
 	TCB* current = CURTHREAD; /* Make a local copy of current process, for speed */
 
 	Mutex_Lock(&sched_spinlock);
+
+	 switch(cause){
+      case SCHED_QUANTUM: 
+          break;
+      case SCHED_IO:       
+          break;
+      case SCHED_MUTEX:    
+          break;
+      case SCHED_PIPE:    
+          break;
+      case SCHED_POLL:     
+          break;
+      case SCHED_IDLE:     
+          break;
+      case SCHED_USER:      
+          break;
+      default:
+          assert(0);  /* We should not get here! */
+  }
 
 	/* Update CURTHREAD state */
 	if (current->state == RUNNING)

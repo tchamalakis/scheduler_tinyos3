@@ -24,6 +24,9 @@
 #include "tinyos.h"
 #include "util.h"
 
+/* The total priority queues of the scheduler */
+#define PRIORITY_QUEUE 8 //Not sure about the '8' tho
+
 /*****************************
  *
  *  The Thread Control Block
@@ -113,6 +116,8 @@ typedef struct thread_control_block {
 	rlnode sched_node; /**< @brief Node to use when queueing in the scheduler queue */
 	TimerDuration its; /**< @brief Initial time-slice for this thread */
 	TimerDuration rts; /**< @brief Remaining time-slice for this thread */
+
+  int priority;  /**< @bried The priority a thread has while in the scheduler's queue(s)*/
 
 	enum SCHED_CAUSE curr_cause; /**< @brief The endcause for the current time-slice */
 	enum SCHED_CAUSE last_cause; /**< @brief The endcause for the last time-slice */
