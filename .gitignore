@@ -1,11 +1,12 @@
 *~
 *.o
 .depend
-mtask
-terminal
 bios_example*
+mtask
+test_example
+test_kernel
 test_util
+terminal
 tinyos_shell
 validate_api
-test_example
 doc/
