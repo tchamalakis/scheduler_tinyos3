@@ -24,8 +24,6 @@
 #include "tinyos.h"
 #include "util.h"
 
-/* The total priority queues of the scheduler */
-#define PRIORITY_QUEUE 8 //Not sure about the '8' tho
 
 /*****************************
  *
@@ -146,6 +144,9 @@ typedef struct thread_control_block {
  *      Scheduler
  *
  ************************/
+
+/* The total priority queues of the scheduler */
+#define LEVELS 4
 
 /** @brief Core control block.
 

@@ -225,7 +225,7 @@ void release_TCB(TCB* tcb)
   Both of these structures are protected by @c sched_spinlock.
 */
 
-rlnode SCHED[PRIORITY_QUEUE]; /* The scheduler queue(s) */
+rlnode SCHED[LEVELS]; /* The scheduler queue(s) */
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 
@@ -233,9 +233,7 @@ Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 void yield_handler() { yield(SCHED_QUANTUM); }
 
 /* Interrupt handle for inter-core interrupts */
-void ici_handler()
-{ /* noop for now... */
-}
+void ici_handler() { /* noop for now... */ }
 
 /*
   Possibly add TCB to the scheduler timeout list.
@@ -268,8 +266,9 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 */
 static void sched_queue_add(TCB* tcb)
 {
+
 	/* Insert at the end of the scheduling list */
-	rlist_push_back(&SCHED, &tcb->sched_node);
+	rlist_push_back(&SCHED[LEVELS], &tcb->sched_node);
 
 	/* Restart possibly halted cores */
 	cpu_core_restart_one();
@@ -285,7 +284,8 @@ static void sched_make_ready(TCB* tcb)
 	assert(tcb->state == STOPPED || tcb->state == INIT);
 
 	/* Possibly remove from TIMEOUT_LIST */
-	if (tcb->wakeup_time != NO_TIMEOUT) {
+	if (tcb->wakeup_time != NO_TIMEOUT)
+	{
 		/* tcb is in TIMEOUT_LIST, fix it */
 		assert(tcb->sched_node.next != &(tcb->sched_node) && tcb->state == STOPPED);
 		rlist_remove(&tcb->sched_node);
@@ -421,19 +421,19 @@ void yield(enum SCHED_CAUSE cause)
 	Mutex_Lock(&sched_spinlock);
 
 	 switch(cause){
-      case SCHED_QUANTUM: 
+      case SCHED_QUANTUM:
           break;
-      case SCHED_IO:       
+      case SCHED_IO:
           break;
-      case SCHED_MUTEX:    
+      case SCHED_MUTEX:
           break;
-      case SCHED_PIPE:    
+      case SCHED_PIPE:
           break;
-      case SCHED_POLL:     
+      case SCHED_POLL:
           break;
-      case SCHED_IDLE:     
+      case SCHED_IDLE:
           break;
-      case SCHED_USER:      
+      case SCHED_USER:
           break;
       default:
           assert(0);  /* We should not get here! */
@@ -545,7 +545,9 @@ static void idle_thread()
  */
 void initialize_scheduler()
 {
-	rlnode_init(&SCHED, NULL);
+	for(int i = 0; i<LEVELS; i++)
+		rlnode_init(&SCHED[i], NULL);
+	
 	rlnode_init(&TIMEOUT_LIST, NULL);
 }
 
