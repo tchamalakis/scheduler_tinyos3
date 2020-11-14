@@ -50,7 +50,6 @@ TCB* cur_thread()
 }
 
 
-
 /*
    The thread layout.
   --------------------
@@ -77,6 +76,8 @@ TCB* cur_thread()
   Disadvantages: The stack cannot grow unless we move the whole TCB. Of course,
   we do not support stack growth anyway!
  */
+
+#define LEVELS 4	/* The number of scheduler priority lists. */
 
 /*
   A counter for active threads. By "active", we mean 'existing',
@@ -170,7 +171,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->rts = QUANTUM;
 	tcb->last_cause = SCHED_IDLE;
 	tcb->curr_cause = SCHED_IDLE;
-	tcb->priority = LEVELS;
+	tcb->priority = LEVELS-1;
 
 	/* Compute the stack segment address and size */
 	void* sp = ((void*)tcb) + THREAD_TCB_SIZE;
@@ -206,6 +207,7 @@ void release_TCB(TCB* tcb)
 	Mutex_Unlock(&active_threads_spinlock);
 }
 
+
 /*
  *
  * Scheduler
@@ -225,8 +227,6 @@ void release_TCB(TCB* tcb)
 
   Both of these structures are protected by @c sched_spinlock.
 */
-
-#define LEVELS 4 /* The total priority queues of the scheduler */
 
 rlnode SCHED[LEVELS]; /* The scheduler queue(s) */
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
@@ -261,7 +261,6 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 	}
 }
 
-//UNFINISHED!
 /*
   Add TCB to the end of the scheduler list.
 
@@ -270,7 +269,8 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 static void sched_queue_add(TCB* tcb)
 {
 	/* Insert at the end of the scheduling list */
-	rlist_push_back(&SCHED[LEVELS], &tcb->sched_node);
+	//(SCHED+tcb->priority)
+	rlist_push_back(&SCHED[tcb->priority], &tcb->sched_node);
 
 	/* Restart possibly halted cores */
 	cpu_core_restart_one();
@@ -321,7 +321,6 @@ static void sched_wakeup_expired_timeouts()
 	}
 }
 
-//UNFINISHED
 
 /*
   Remove the head of the scheduler list, if any, and
@@ -331,14 +330,27 @@ static void sched_wakeup_expired_timeouts()
 */
 static TCB* sched_queue_select(TCB* current)
 {
-	/* Get the head of the SCHED list */
-	rlnode* sel = rlist_pop_front(&SCHED);
+	// sched_wakeup_expired_timeouts();
 
-	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
+	int i = LEVELS-1;
 
-	if (next_thread == NULL)
+	while(is_rlist_empty(&SCHED[i]) && i>=0)
+		i--;
+
+	TCB* next_thread;
+
+	if (i >= 0)
+	{
+		rlnode* sel = rlist_pop_front(&SCHED[i]);
+		next_thread = sel->tcb; /* When the list is empty, this is NULL */
+		if (next_thread->priority < current->priority && current->state == READY)
+			next_thread = current;
+	}
+	else
 		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
 
+	/* possible change: high priority (we control what "high" means) queues 
+	have smaller its */
 	next_thread->its = QUANTUM;
 
 	return next_thread;
@@ -357,7 +369,8 @@ int wakeup(TCB* tcb)
 	/* To touch tcb->state, we must get the spinlock. */
 	Mutex_Lock(&sched_spinlock);
 
-	if (tcb->state == STOPPED || tcb->state == INIT) {
+	if (tcb->state == STOPPED || tcb->state == INIT)
+	{
 		sched_make_ready(tcb);
 		ret = 1;
 	}
@@ -406,7 +419,6 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 		preempt_on;
 }
 
-//UNFINISHED!
 
 /* This function is the entry point to the scheduler's context switching */
 
@@ -446,13 +458,13 @@ void yield(enum SCHED_CAUSE cause)
 
 		case SCHED_MUTEX:
 			if (current->last_cause == current->curr_cause &&
-				current->curr_cause == SCHED_MUTEX)
+				current->curr_cause == SCHED_MUTEX && current->priority > 0)
 				current->priority--;
 			break;
 		default:
 			break;
 	}
-	
+
 	/* Wake up threads whose sleep timeout has expired */
 	sched_wakeup_expired_timeouts();
 
@@ -504,17 +516,18 @@ void gain(int preempt)
 	TCB* prev = CURCORE.previous_thread;
 	if (current != prev) {
 		prev->phase = CTX_CLEAN;
-		switch (prev->state) {
-		case READY:
-			if (prev->type != IDLE_THREAD)
-				sched_queue_add(prev);
-			break;
-		case EXITED:
-			release_TCB(prev);
-			break;
-		case STOPPED:
-			break;
-		default:
+		switch (prev->state)
+		{
+			case READY:
+				if (prev->type != IDLE_THREAD)
+					sched_queue_add(prev);
+				break;
+			case EXITED:
+				release_TCB(prev);
+				break;
+			case STOPPED:
+				break;
+			default:
 			assert(0); /* prev->state should not be INIT or RUNNING ! */
 		}
 	}
@@ -577,6 +590,8 @@ void run_scheduler()
 
 	curcore->idle_thread.curr_cause = SCHED_IDLE;
 	curcore->idle_thread.last_cause = SCHED_IDLE;
+
+	curcore->idle_thread.priority = LEVELS-1;
 
 	/* Initialize interrupt handler */
 	cpu_interrupt_handler(ALARM, yield_handler);
