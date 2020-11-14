@@ -170,6 +170,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->rts = QUANTUM;
 	tcb->last_cause = SCHED_IDLE;
 	tcb->curr_cause = SCHED_IDLE;
+	tcb->priority = LEVELS;
 
 	/* Compute the stack segment address and size */
 	void* sp = ((void*)tcb) + THREAD_TCB_SIZE;
@@ -225,6 +226,8 @@ void release_TCB(TCB* tcb)
   Both of these structures are protected by @c sched_spinlock.
 */
 
+#define LEVELS 4 /* The total priority queues of the scheduler */
+
 rlnode SCHED[LEVELS]; /* The scheduler queue(s) */
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
@@ -266,7 +269,6 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 */
 static void sched_queue_add(TCB* tcb)
 {
-
 	/* Insert at the end of the scheduling list */
 	rlist_push_back(&SCHED[LEVELS], &tcb->sched_node);
 
@@ -420,24 +422,6 @@ void yield(enum SCHED_CAUSE cause)
 
 	Mutex_Lock(&sched_spinlock);
 
-	 switch(cause){
-      case SCHED_QUANTUM:
-          break;
-      case SCHED_IO:
-          break;
-      case SCHED_MUTEX:
-          break;
-      case SCHED_PIPE:
-          break;
-      case SCHED_POLL:
-          break;
-      case SCHED_IDLE:
-          break;
-      case SCHED_USER:
-          break;
-      default:
-          assert(0);  /* We should not get here! */
-  }
 
 	/* Update CURTHREAD state */
 	if (current->state == RUNNING)
@@ -448,6 +432,27 @@ void yield(enum SCHED_CAUSE cause)
 	current->last_cause = current->curr_cause;
 	current->curr_cause = cause;
 
+	switch(cause)
+	{
+		case SCHED_QUANTUM:
+			if (current->priority > 0)
+				current->priority--;
+			break;
+
+		case SCHED_IO:
+			if (current->priority < LEVELS)
+				current->priority++;
+			break;
+
+		case SCHED_MUTEX:
+			if (current->last_cause == current->curr_cause &&
+				current->curr_cause == SCHED_MUTEX)
+				current->priority--;
+			break;
+		default:
+			break;
+	}
+	
 	/* Wake up threads whose sleep timeout has expired */
 	sched_wakeup_expired_timeouts();
 

@@ -145,9 +145,6 @@ typedef struct thread_control_block {
  *
  ************************/
 
-/* The total priority queues of the scheduler */
-#define LEVELS 4
-
 /** @brief Core control block.
 
   Per-core info in memory (basically scheduler-related). 
