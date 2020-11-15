@@ -436,7 +436,7 @@ static inline void rlist_push_back(rlnode* list, rlnode* node) { rl_splice(list-
 	@brief Remove and return the head of the list.
 
 	This function, applied on a non-empty list, will remove the head of 
-	the list and return in.
+	the list and return it.
 
 	When it is applied to an empty list, the function will return the
 	list itself.

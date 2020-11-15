@@ -77,7 +77,9 @@ TCB* cur_thread()
   we do not support stack growth anyway!
  */
 
-#define LEVELS 4	/* The number of scheduler priority lists. */
+#define LEVELS 10	/* The number of scheduler priority lists. */
+#define BOOST_NO 30	/* This defines the number of times until we
+boost the priority of all threads .*/
 
 /*
   A counter for active threads. By "active", we mean 'existing',
@@ -231,6 +233,7 @@ void release_TCB(TCB* tcb)
 rlnode SCHED[LEVELS]; /* The scheduler queue(s) */
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
+static int boost_cnt = 0;
 
 /* Interrupt handler for ALARM */
 void yield_handler() { yield(SCHED_QUANTUM); }
@@ -421,6 +424,22 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 		preempt_on;
 }
 
+void priority_boost(rlnode* SCHED, int levels)
+{
+	rlnode* node;
+	for(int i=levels-1; i>0; i--)
+	{
+		node = &SCHED[i-1];
+		while(!is_rlist_empty(&SCHED[i-1]))
+		{
+			node = rlist_pop_front(&SCHED[i-1]);
+			node->tcb->priority++;
+			rlist_push_back(&SCHED[i], node);
+			// node = node->next;
+		}
+	}
+}
+
 
 /* This function is the entry point to the scheduler's context switching */
 
@@ -435,6 +454,14 @@ void yield(enum SCHED_CAUSE cause)
 	TCB* current = CURTHREAD; /* Make a local copy of current process, for speed */
 
 	Mutex_Lock(&sched_spinlock);
+
+	if(boost_cnt == BOOST_NO-1)
+	{
+		priority_boost(SCHED, LEVELS);
+		boost_cnt = 0;
+	}
+	else
+		boost_cnt++;
 
 
 	/* Update CURTHREAD state */
