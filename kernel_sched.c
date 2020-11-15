@@ -245,7 +245,8 @@ void ici_handler() { /* noop for now... */ }
 */
 static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 {
-	if (timeout != NO_TIMEOUT) {
+	if (timeout != NO_TIMEOUT)
+	{
 		/* set the wakeup time */
 		TimerDuration curtime = bios_clock();
 		tcb->wakeup_time = (timeout == NO_TIMEOUT) ? NO_TIMEOUT : curtime + timeout;
@@ -313,7 +314,8 @@ static void sched_wakeup_expired_timeouts()
 	/* Empty the timeout list up to the current time and wake up each thread */
 	TimerDuration curtime = bios_clock();
 
-	while (!is_rlist_empty(&TIMEOUT_LIST)) {
+	while (!is_rlist_empty(&TIMEOUT_LIST))
+	{
 		TCB* tcb = TIMEOUT_LIST.next->tcb;
 		if (tcb->wakeup_time > curtime)
 			break;
@@ -330,7 +332,7 @@ static void sched_wakeup_expired_timeouts()
 */
 static TCB* sched_queue_select(TCB* current)
 {
-	// sched_wakeup_expired_timeouts();
+	sched_wakeup_expired_timeouts();
 
 	int i = LEVELS-1;
 
@@ -343,8 +345,8 @@ static TCB* sched_queue_select(TCB* current)
 	{
 		rlnode* sel = rlist_pop_front(&SCHED[i]);
 		next_thread = sel->tcb; /* When the list is empty, this is NULL */
-		if (next_thread->priority < current->priority && current->state == READY)
-			next_thread = current;
+		// if (next_thread->priority < current->priority && current->state == READY)
+			// next_thread = current;
 	}
 	else
 		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
@@ -514,7 +516,8 @@ void gain(int preempt)
 
 	/* Take care of the previous thread */
 	TCB* prev = CURCORE.previous_thread;
-	if (current != prev) {
+	if (current != prev)
+	{
 		prev->phase = CTX_CLEAN;
 		switch (prev->state)
 		{
