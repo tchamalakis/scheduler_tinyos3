@@ -6,6 +6,7 @@
 #include "kernel_proc.h"
 #include "kernel_sched.h"
 #include "tinyos.h"
+#include "unit_testing.h"
 
 #ifndef NVALGRIND
 #include <valgrind/valgrind.h>
@@ -77,7 +78,7 @@ TCB* cur_thread()
   we do not support stack growth anyway!
  */
 
-#define LEVELS 10	/* The number of scheduler priority lists. */
+#define LEVELS 50	/* The number of scheduler priority lists. */
 #define BOOST_NO 30	/* This defines the number of times until we
 boost the priority of all threads .*/
 
@@ -274,6 +275,7 @@ static void sched_queue_add(TCB* tcb)
 {
 	/* Insert at the end of the scheduling list */
 	//(SCHED+tcb->priority)
+	// ASSERT(tcb->priority < LEVELS);
 	rlist_push_back(&SCHED[tcb->priority], &tcb->sched_node);
 
 	/* Restart possibly halted cores */
@@ -335,8 +337,6 @@ static void sched_wakeup_expired_timeouts()
 */
 static TCB* sched_queue_select(TCB* current)
 {
-	sched_wakeup_expired_timeouts();
-
 	int i = LEVELS-1;
 
 	while(is_rlist_empty(&SCHED[i]) && i>=0)
@@ -397,7 +397,6 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 {
 	assert(state == STOPPED || state == EXITED);
 
-
 	int preempt = preempt_off;
 	TCB* tcb = CURTHREAD;
 	Mutex_Lock(&sched_spinlock);
@@ -433,6 +432,7 @@ void priority_boost(rlnode* SCHED, int levels)
 		{
 			node = rlist_pop_front(&SCHED[i-1]);
 			node->tcb->priority++;
+			// ASSERT(node->tcb->priority < LEVELS);
 			rlist_push_back(&SCHED[i], node);
 		}
 	}
@@ -478,7 +478,7 @@ void yield(enum SCHED_CAUSE cause)
 			break;
 
 		case SCHED_IO:
-			if (current->priority < LEVELS)
+			if (current->priority < LEVELS -1)
 				current->priority++;
 			break;
 
