@@ -429,13 +429,11 @@ void priority_boost(rlnode* SCHED, int levels)
 	rlnode* node;
 	for(int i=levels-1; i>0; i--)
 	{
-		// node = &SCHED[i-1]; // not needed
 		while(!is_rlist_empty(&SCHED[i-1]))
 		{
 			node = rlist_pop_front(&SCHED[i-1]);
 			node->tcb->priority++;
 			rlist_push_back(&SCHED[i], node);
-			// node = node->next; // also not needed
 		}
 	}
 }
@@ -462,7 +460,6 @@ void yield(enum SCHED_CAUSE cause)
 	}
 	else
 		boost_cnt++;
-
 
 	/* Update CURTHREAD state */
 	if (current->state == RUNNING)
@@ -507,7 +504,8 @@ void yield(enum SCHED_CAUSE cause)
 	Mutex_Unlock(&sched_spinlock);
 
 	/* Switch contexts */
-	if (current != next) {
+	if (current != next)
+	{
 		CURTHREAD = next;
 		cpu_swap_context(&current->context, &next->context);
 	}
@@ -578,7 +576,8 @@ static void idle_thread()
 	yield(SCHED_IDLE);
 
 	/* We come here whenever we cannot find a ready thread for our core */
-	while (active_threads > 0) {
+	while (active_threads > 0)
+	{
 		cpu_core_halt();
 		yield(SCHED_IDLE);
 	}
