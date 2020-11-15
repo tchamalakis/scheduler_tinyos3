@@ -3,10 +3,10 @@
 .depend
 bios_example*
 mtask
+terminal
 test_example
 test_kernel
 test_util
-terminal
 tinyos_shell
 validate_api
 doc/
