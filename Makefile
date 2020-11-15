@@ -46,6 +46,7 @@ LIBS=-lpthread -lrt -lm
 
 
 C_PROG= test_util.c \
+	test_kernel.c \
  	mtask.c tinyos_shell.c terminal.c \
  	validate_api.c \
  	$(EXAMPLE_PROG)
