@@ -429,13 +429,13 @@ void priority_boost(rlnode* SCHED, int levels)
 	rlnode* node;
 	for(int i=levels-1; i>0; i--)
 	{
-		node = &SCHED[i-1];
+		// node = &SCHED[i-1]; // not needed
 		while(!is_rlist_empty(&SCHED[i-1]))
 		{
 			node = rlist_pop_front(&SCHED[i-1]);
 			node->tcb->priority++;
 			rlist_push_back(&SCHED[i], node);
-			// node = node->next;
+			// node = node->next; // also not needed
 		}
 	}
 }
