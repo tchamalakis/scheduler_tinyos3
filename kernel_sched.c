@@ -6,7 +6,7 @@
 #include "kernel_proc.h"
 #include "kernel_sched.h"
 #include "tinyos.h"
-#include "unit_testing.h"
+// #include "unit_testing.h"
 
 #ifndef NVALGRIND
 #include <valgrind/valgrind.h>
@@ -78,9 +78,9 @@ TCB* cur_thread()
   we do not support stack growth anyway!
  */
 
-#define LEVELS 50	/* The number of scheduler priority lists. */
-#define BOOST_NO 30	/* This defines the number of times until we
-boost the priority of all threads .*/
+#define LEVELS 50		/*	The number of scheduler priority lists. */
+#define BOOST_NO 100	/*	This defines the number of times until we
+							boost the priority of all threads .*/
 
 /*
   A counter for active threads. By "active", we mean 'existing',
